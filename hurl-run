@@ -68,7 +68,7 @@ def interpolate_dict_with_python(default_headers):
 def construct_hurl_file(file, default_headers) -> str:
     with open(file) as f:
         content = f.read()
-    header_lines = "\n".join([f"{key}: {value}" for key, value in default_headers.items()]) + "\n"
+    header_lines = "\n" + "\n".join([f"{key}: {value}" for key, value in default_headers.items()]) + "\n"
     return re.sub(REQUEST_LINE_PATTERN, f"\1{header_lines}", content)
 
 
