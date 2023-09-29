@@ -50,10 +50,10 @@ def init_extra_functions():
 def get_default_headers(active_env):
     with open(DEFAULT_HEADERS_FILE) as f:
         default_headers_file_content = json.load(f)
-    default_headers = {key: value for key, value in default_headers_file_content if type(value) == str}
+    default_headers = {key: value for key, value in default_headers_file_content.items() if type(value) == str}
     if active_env in default_headers_file_content:
         env_headers = default_headers_file_content[active_env]
-        default_headers.update({key: value for key, value in env_headers if type(value) == str})
+        default_headers.update({key: value for key, value in env_headers.items() if type(value) == str})
     return default_headers
 
 
@@ -62,13 +62,13 @@ def interpolate_str_with_python(s: str):
 
 
 def interpolate_dict_with_python(default_headers):
-    return {interpolate_str_with_python(key): interpolate_str_with_python(value) for key, value in default_headers}
+    return {interpolate_str_with_python(key): interpolate_str_with_python(value) for key, value in default_headers.items()}
 
 
 def construct_hurl_file(file, default_headers) -> str:
     with open(file) as f:
         content = f.read()
-    header_lines = "\n".join([f"{key}: {value}" for key, value in default_headers]) + "\n"
+    header_lines = "\n".join([f"{key}: {value}" for key, value in default_headers.items()]) + "\n"
     return re.sub(REQUEST_LINE_PATTERN, f"\1{header_lines}", content)
 
 
