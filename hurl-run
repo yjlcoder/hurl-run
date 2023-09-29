@@ -1,11 +1,18 @@
 #!env python3
 import argparse
+import json
 import os.path
+import re
 import subprocess
 import sys
+from typing import Tuple
 
 ACTIVE_ENV_FILE = ".helper/env"
+EXTRA_FUNCTIONS_FILE = ".helper/extra-functions.py"
+DEFAULT_HEADERS_FILE = "./helper/default-headers.json"
+INTERPOLATION_PATTERN = re.compile(r"%%python\{(\S+?)\}%%")
 ENV_FOLDER = "envs"
+REQUEST_LINE_PATTERN = re.compile(r"(^(?:GET|POST|HEAD|PUT|DELETE|CONNECT|OPTIONS|TRACE|PATCH|QUERY) \S+$)")
 
 
 def health_check():
@@ -13,17 +20,19 @@ def health_check():
     Check to make sure all required files exist under current folder
     """
     assert os.path.isfile(ACTIVE_ENV_FILE), f"Please create a file {ACTIVE_ENV_FILE} to include the environment to use"
+    assert os.path.isfile(EXTRA_FUNCTIONS_FILE), f"Please create a file {EXTRA_FUNCTIONS_FILE} to include extra python functions. You can create an empty file."
+    assert os.path.isfile(DEFAULT_HEADERS_FILE), f"Please create a file {DEFAULT_HEADERS_FILE} to include default headers for all requests."
 
 
-def get_active_env() -> str:
+def get_active_env() -> Tuple[str, str]:
     """
-    Return the env file to load into hurl command
+    Return the active env and env variable file to load into hurl command
     """
     with open(ACTIVE_ENV_FILE) as f:
         active_env = f.read().strip()
     env_file_path = f"{ENV_FOLDER}/{active_env}.env"
     assert os.path.isfile(env_file_path), f"Cannot find environment {active_env} from file {env_file_path}"
-    return env_file_path
+    return active_env, env_file_path
 
 
 def parse_args():
@@ -32,11 +41,50 @@ def parse_args():
     return parser.parse_known_args()
 
 
+def init_extra_functions():
+    with open(EXTRA_FUNCTIONS_FILE) as f:
+        extra_functions_content = f.read()
+    exec(extra_functions_content, globals())
+
+
+def get_default_headers(active_env):
+    with open(DEFAULT_HEADERS_FILE) as f:
+        default_headers_file_content = json.load(f)
+    default_headers = {key: value for key, value in default_headers_file_content if type(value) == str}
+    if active_env in default_headers_file_content:
+        env_headers = default_headers_file_content[active_env]
+        default_headers.update({key: value for key, value in env_headers if type(value) == str})
+    return default_headers
+
+
+def interpolate_str_with_python(s: str):
+    re.sub(INTERPOLATION_PATTERN, lambda match: str(eval(match.group(1))), s)
+
+
+def interpolate_dict_with_python(default_headers):
+    return {interpolate_str_with_python(key): interpolate_str_with_python(value) for key, value in default_headers}
+
+
+def construct_hurl_file(file, default_headers) -> str:
+    with open(file) as f:
+        content = f.read()
+    header_lines = "\n".join([f"{key}: {value}" for key, value in default_headers]) + "\n"
+    return re.sub(REQUEST_LINE_PATTERN, f"\1{header_lines}", content)
+
+
 def main():
     known_args, unknown_args = parse_args()
     health_check()
-    env_file_path = get_active_env()
-    subprocess.call(["hurl", "--variables-file", env_file_path, *unknown_args, known_args.file], stdout=sys.stdout, stderr=sys.stderr)
+    init_extra_functions()
+    active_env, env_file_path = get_active_env()
+    default_headers = get_default_headers(active_env)
+    default_headers = interpolate_dict_with_python(default_headers)
+
+    if len(default_headers) == 0:
+        subprocess.run(["hurl", "--variables-file", env_file_path, *unknown_args, known_args.file], stdout=sys.stdout, stderr=sys.stderr)
+    else:
+        newly_constructed_file = construct_hurl_file(known_args.file, default_headers)
+        subprocess.run(["hurl", "--variables-file", env_file_path, *unknown_args], input=newly_constructed_file, stdout=sys.stdout, stderr=sys.stderr)
 
 
 if __name__ == '__main__':
