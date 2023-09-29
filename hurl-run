@@ -9,7 +9,7 @@ from typing import Tuple
 
 ACTIVE_ENV_FILE = ".helper/env"
 EXTRA_FUNCTIONS_FILE = ".helper/extra-functions.py"
-DEFAULT_HEADERS_FILE = "./helper/default-headers.json"
+DEFAULT_HEADERS_FILE = ".helper/default-headers.json"
 INTERPOLATION_PATTERN = re.compile(r"%%python\{(\S+?)\}%%")
 ENV_FOLDER = "envs"
 REQUEST_LINE_PATTERN = re.compile(r"(^(?:GET|POST|HEAD|PUT|DELETE|CONNECT|OPTIONS|TRACE|PATCH|QUERY) \S+$)")
