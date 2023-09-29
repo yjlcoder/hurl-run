@@ -29,14 +29,14 @@ def get_active_env() -> str:
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("file", help="Hurl file to run")
-    return parser.parse_args()
+    return parser.parse_known_args()
 
 
 def main():
-    args = parse_args()
+    known_args, unknown_args = parse_args()
     health_check()
     env_file_path = get_active_env()
-    subprocess.call(["hurl", "--variables-file", env_file_path, args.file], stdout=sys.stdout, stderr=sys.stderr)
+    subprocess.call(["hurl", "--variables-file", env_file_path, *unknown_args, known_args.file], stdout=sys.stdout, stderr=sys.stderr)
 
 
 if __name__ == '__main__':
