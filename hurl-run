@@ -1,0 +1,43 @@
+#!env python3
+import argparse
+import os.path
+import subprocess
+import sys
+
+ACTIVE_ENV_FILE = ".helper/env"
+ENV_FOLDER = "envs"
+
+
+def health_check():
+    """
+    Check to make sure all required files exist under current folder
+    """
+    assert os.path.isfile(ACTIVE_ENV_FILE), f"Please create a file {ACTIVE_ENV_FILE} to include the environment to use"
+
+
+def get_active_env() -> str:
+    """
+    Return the env file to load into hurl command
+    """
+    with open(ACTIVE_ENV_FILE) as f:
+        active_env = f.read().strip()
+    env_file_path = f"{ENV_FOLDER}/${active_env}"
+    assert os.path.isfile(env_file_path), f"Cannot find environment {active_env} from file {env_file_path}"
+    return env_file_path
+
+
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("file", help="Hurl file to run")
+    return parser.parse_args()
+
+
+def main():
+    args = parse_args()
+    health_check()
+    env_file_path = get_active_env()
+    subprocess.call(["hurl", "--variables-file", env_file_path, args.file], stdout=sys.stdout, stderr=sys.stderr)
+
+
+if __name__ == '__main__':
+    main()
