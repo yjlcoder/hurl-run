@@ -6,6 +6,7 @@
 * Interpolate header names and header values using Python functions
 * Define your own Python functions and use them in interpolations
 * Set active environment in a file
+* All unused command arguments in this script are passed to `hurl`.
 
 ## How
 
