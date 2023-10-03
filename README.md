@@ -11,7 +11,7 @@
 
 ### Set active environment
 
-1. Create directory `envs` in the project folder, and put variables in `<environment>.env`. The format of the file is identical to `hurl`'s `--variables-file`.
+1. Create directory `envs` in the project folder, and put variables in `envs/<environment>.env`. The format of the file is identical to `hurl`'s `--variables-file`.
    * Example: `local` environmental variables should be saved in `envs/local.env`.
    * Example: `dev` environmental variables should be saved in `envs/dev.dev`.
 2. Create file `.helper/env`, and in the file, indicate the name of the active environment.
