@@ -57,12 +57,19 @@ def get_default_headers(active_env):
     return default_headers
 
 
-def interpolate_str_with_python(s: str):
-    return re.sub(INTERPOLATION_PATTERN, lambda match: str(eval(match.group(1))), s)
+def interpolate_str_with_python(s: str, env_variables: dict[str, str]):
+    python_assignment_statements = '\n'.join([f"{key} = '''{value}'''" for key, value in env_variables])
+
+    # Create a new scope in case the python script has conflicts with outer environments. Names are purposefully defined to avoid conflicts
+    def run_eval_asdiujewr(___pre_code_, ____eval_body_):
+        exec(___pre_code_, locals())
+        return str(eval(____eval_body_, locals()))
+
+    return re.sub(INTERPOLATION_PATTERN, lambda match: run_eval_asdiujewr(python_assignment_statements, match.group(1)), s)
 
 
-def interpolate_dict_with_python(default_headers):
-    return {interpolate_str_with_python(key): interpolate_str_with_python(value) for key, value in default_headers.items()}
+def interpolate_dict_with_python(default_headers, env_variables: dict[str, str]):
+    return {interpolate_str_with_python(key, env_variables): interpolate_str_with_python(value, env_variables) for key, value in default_headers.items()}
 
 
 def construct_hurl_file(file, default_headers) -> str:
@@ -72,13 +79,20 @@ def construct_hurl_file(file, default_headers) -> str:
     return re.sub(REQUEST_LINE_PATTERN, f"\g<1>{header_lines}", content)
 
 
+def load_env_variables_from_file(env_file_path: str):
+    with open(env_file_path) as f:
+        content = f.read()
+    return {s.strip().split('=', maxsplit=1)[0]: s.strip().split('=', maxsplit=1)[1] for s in content.splitlines()}
+
+
 def main():
     known_args, unknown_args = parse_args()
     health_check()
     init_extra_functions()
     active_env, env_file_path = get_active_env()
+    env_variables = load_env_variables_from_file(env_file_path)
     default_headers = get_default_headers(active_env)
-    default_headers = interpolate_dict_with_python(default_headers)
+    default_headers = interpolate_dict_with_python(default_headers, env_variables)
 
     if len(default_headers) == 0:
         subprocess.run(["hurl", "--variables-file", env_file_path, *unknown_args, known_args.file], stdout=sys.stdout, stderr=sys.stderr)
